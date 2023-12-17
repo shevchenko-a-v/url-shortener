@@ -3,13 +3,14 @@ package endpoint
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-playground/validator/v10"
 	"log/slog"
 	"net/http"
 	"strings"
 	"url-shortener/internal/app/middleware"
 	"url-shortener/internal/pkg/alias"
 	"url-shortener/internal/pkg/api/response"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type Service interface {
@@ -58,7 +59,7 @@ func (e *Endpoint) SaveUrl(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if err = validator.New().Struct(body); err != nil {
-		log.Error("invalid request", err.Error())
+		log.Error(fmt.Sprintf("invalid request: %s", err.Error()))
 		_ = encoder.Encode(response.Error("wrong request format"))
 		return
 	}
@@ -95,4 +96,5 @@ func (e *Endpoint) Redirect(rw http.ResponseWriter, req *http.Request) {
 	}
 	log.Debug(fmt.Sprintf("found %s url for given alias %s", resultUrl, aliasToGetUrl))
 
+	http.Redirect(rw, req, resultUrl, http.StatusFound)
 }

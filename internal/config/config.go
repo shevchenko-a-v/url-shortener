@@ -3,9 +3,10 @@ package config
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"log/slog"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
