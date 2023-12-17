@@ -13,6 +13,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.38.0 --name=Service
 type Service interface {
 	SaveUrl(string, string) error
 	GetUrl(string) (string, error)
@@ -60,6 +61,11 @@ func (e *Endpoint) SaveUrl(rw http.ResponseWriter, req *http.Request) {
 	}
 	if err = validator.New().Struct(body); err != nil {
 		log.Error(fmt.Sprintf("invalid request: %s", err.Error()))
+		_ = encoder.Encode(response.Error("wrong request format"))
+		return
+	}
+	if body.TargetUrl == "" {
+		log.Error("field url must not be empty")
 		_ = encoder.Encode(response.Error("wrong request format"))
 		return
 	}
