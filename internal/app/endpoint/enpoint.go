@@ -41,6 +41,7 @@ func New(log *slog.Logger, repository Repository, defaultAliasLength uint64) *En
 
 func (e *Endpoint) SaveUrl(rw http.ResponseWriter, req *http.Request) {
 	encoder := json.NewEncoder(rw)
+	rw.Header().Set("Content-Type", "application/json")
 	log := e.log.With(
 		slog.String("op", "Endpoint.SaveUrl"),
 		slog.String("request_id", middleware.GetRequestId(req.Context())),

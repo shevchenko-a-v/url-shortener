@@ -3,6 +3,6 @@ storage_path: "./storage/url-shortener.db"
 log_level: "debug"
 log_format: "json"
 http_server:
-  address: "localhost:8080"
+  address: "localhost:8082"
   username: myuser
   password: mypass
