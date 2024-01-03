@@ -13,6 +13,7 @@ import (
 	"url-shortener/internal/app/endpoint/mocks"
 	"url-shortener/internal/pkg/slogdiscard"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -64,7 +65,7 @@ func TestSaveHandler(t *testing.T) {
 			unit := endpoint.New(slogdiscard.New(), repositoryMock, tc.aliasLength)
 			unit.SaveUrl(rr, req)
 
-			require.Equal(t, rr.Code, http.StatusOK)
+			require.Equal(t, http.StatusOK, rr.Code)
 
 			body := rr.Body.String()
 			var resp endpoint.Response
@@ -73,14 +74,69 @@ func TestSaveHandler(t *testing.T) {
 			if tc.respError != "" {
 				expectedStatus = "Error"
 			}
-			require.Equal(t, expectedStatus, resp.Status)
-			require.Equal(t, tc.respError, resp.Error)
+			assert.Equal(t, expectedStatus, resp.Status)
+			assert.Equal(t, tc.respError, resp.Error)
 			if tc.respError == "" {
 				if tc.alias != "" {
-					require.Equal(t, tc.alias, resp.Alias)
+					assert.Equal(t, tc.alias, resp.Alias)
 				} else {
-					require.Equal(t, len(resp.Alias), int(tc.aliasLength))
+					assert.Equal(t, len(resp.Alias), int(tc.aliasLength))
 				}
+			}
+		})
+	}
+
+}
+
+func TestRedirectHandler(t *testing.T) {
+	cases := []struct {
+		name      string
+		alias     string
+		targetUrl string
+		mockError error
+	}{
+		{
+			name:      "Success",
+			alias:     "test_alias",
+			targetUrl: "http://www.google.com",
+		},
+		{
+			name:      "Empty alias",
+			alias:     "",
+			targetUrl: "http://www.google.com",
+		},
+		{
+			name:      "Url not found for alias",
+			alias:     "test_alias",
+			targetUrl: "",
+			mockError: errors.New("some internal error"),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/%s", tc.alias), bytes.NewReader([]byte{}))
+			require.NoError(t, err)
+
+			rr := httptest.NewRecorder()
+			repositoryMock := mocks.NewRepository(t)
+			repositoryMock.On("GetUrl", tc.alias).Return(tc.targetUrl, tc.mockError).Once()
+			unit := endpoint.New(slogdiscard.New(), repositoryMock, 10)
+			unit.Redirect(rr, req)
+
+			expectedStatus := http.StatusFound
+			if tc.mockError != nil {
+				expectedStatus = http.StatusOK
+			}
+			require.Equal(t, expectedStatus, rr.Code)
+
+			body := rr.Body.String()
+			if tc.mockError == nil {
+				assert.Equal(t, fmt.Sprintf("<a href=\"%s\">Found</a>.\n\n", tc.targetUrl), body)
+			} else {
+				var resp endpoint.Response
+				assert.NoError(t, json.Unmarshal([]byte(body), &resp))
+				assert.Equal(t, "Error", resp.Status)
+				assert.Equal(t, "couldn't find given alias", resp.Error)
 			}
 		})
 	}
