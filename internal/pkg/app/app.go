@@ -9,6 +9,7 @@ import (
 	"url-shortener/internal/app/endpoint"
 	"url-shortener/internal/app/middleware"
 	"url-shortener/internal/config"
+	"url-shortener/internal/pkg/authorization_checker"
 	"url-shortener/internal/pkg/repository/sqlite"
 )
 
@@ -39,8 +40,10 @@ func New() *App {
 	e := endpoint.New(slog.Default(), storage, c.AliasLength)
 	mux := http.NewServeMux()
 
-	mux.Handle("/save", middleware.RequestId(middleware.Logger(http.HandlerFunc(e.SaveUrl))))
-	mux.Handle("/", middleware.RequestId(middleware.Logger(http.HandlerFunc(e.Redirect))))
+	authorizationChecker := authorization_checker.New(c.HttpServer.Username, c.HttpServer.Password)
+
+	mux.Handle("/save", middleware.RequestId(middleware.Logger(middleware.BasicAuth(authorizationChecker, http.HandlerFunc(e.SaveUrl)))))
+	mux.Handle("/", middleware.RequestId(middleware.Logger(middleware.BasicAuth(authorizationChecker, http.HandlerFunc(e.Redirect)))))
 	return &App{config: c, mux: mux, endpoint: e}
 }
 

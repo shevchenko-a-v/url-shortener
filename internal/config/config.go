@@ -18,7 +18,9 @@ type Config struct {
 }
 
 type HttpServerConfig struct {
-	Address string `yaml:"address"`
+	Address  string `yaml:"address"`
+	Username string `yaml:"username" env-required:"true"`
+	Password string `yaml:"password" env-required:"true" env:"HTTP_SERVER_PASSWORD"`
 }
 
 func MustLoad(path string) *Config {

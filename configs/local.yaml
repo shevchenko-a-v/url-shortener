@@ -4,3 +4,5 @@ log_level: "debug"
 log_format: "json"
 http_server:
   address: "localhost:8080"
+  username: myuser
+  password: mypass
