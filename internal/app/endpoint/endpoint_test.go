@@ -93,6 +93,7 @@ func TestRedirectHandler(t *testing.T) {
 		name      string
 		alias     string
 		targetUrl string
+		respError string
 		mockError error
 	}{
 		{
@@ -104,11 +105,13 @@ func TestRedirectHandler(t *testing.T) {
 			name:      "Empty alias",
 			alias:     "",
 			targetUrl: "http://www.google.com",
+			respError: "empty alias",
 		},
 		{
 			name:      "Url not found for alias",
 			alias:     "test_alias",
 			targetUrl: "",
+			respError: "couldn't find given alias",
 			mockError: errors.New("some internal error"),
 		},
 	}
@@ -119,24 +122,26 @@ func TestRedirectHandler(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 			repositoryMock := mocks.NewRepository(t)
-			repositoryMock.On("GetUrl", tc.alias).Return(tc.targetUrl, tc.mockError).Once()
+			if tc.alias != "" {
+				repositoryMock.On("GetUrl", tc.alias).Return(tc.targetUrl, tc.mockError).Once()
+			}
 			unit := endpoint.New(slogdiscard.New(), repositoryMock, 10)
 			unit.Redirect(rr, req)
 
 			expectedStatus := http.StatusFound
-			if tc.mockError != nil {
+			if tc.mockError != nil || tc.alias == "" {
 				expectedStatus = http.StatusOK
 			}
 			require.Equal(t, expectedStatus, rr.Code)
 
 			body := rr.Body.String()
-			if tc.mockError == nil {
+			if tc.mockError == nil && tc.alias != "" {
 				assert.Equal(t, fmt.Sprintf("<a href=\"%s\">Found</a>.\n\n", tc.targetUrl), body)
 			} else {
 				var resp endpoint.Response
 				assert.NoError(t, json.Unmarshal([]byte(body), &resp))
 				assert.Equal(t, "Error", resp.Status)
-				assert.Equal(t, "couldn't find given alias", resp.Error)
+				assert.Equal(t, tc.respError, resp.Error)
 			}
 		})
 	}

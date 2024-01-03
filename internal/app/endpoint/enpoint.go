@@ -96,6 +96,11 @@ func (e *Endpoint) Redirect(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	aliasToGetUrl, _ := strings.CutPrefix(req.URL.String(), "/")
+	if aliasToGetUrl == "" {
+		log.Error("alias is empty")
+		_ = encoder.Encode(response.Error("empty alias"))
+		return
+	}
 	resultUrl, err := e.repository.GetUrl(aliasToGetUrl)
 	if err != nil {
 		log.Error(err.Error())
