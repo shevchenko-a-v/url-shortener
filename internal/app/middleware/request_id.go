@@ -2,9 +2,10 @@ package middleware
 
 import (
 	"context"
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 type ContextKey string

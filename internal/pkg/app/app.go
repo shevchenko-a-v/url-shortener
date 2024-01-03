@@ -8,7 +8,6 @@ import (
 	"strings"
 	"url-shortener/internal/app/endpoint"
 	"url-shortener/internal/app/middleware"
-	"url-shortener/internal/app/service"
 	"url-shortener/internal/config"
 	"url-shortener/internal/pkg/repository/sqlite"
 )
@@ -17,7 +16,6 @@ type App struct {
 	config   *config.Config
 	mux      *http.ServeMux
 	endpoint *endpoint.Endpoint
-	service  *service.Service
 }
 
 const (
@@ -38,13 +36,12 @@ func New() *App {
 		slog.Error(fmt.Sprintf("couldn't open repository: %s", err.Error()))
 		return nil
 	}
-	s := service.New(storage)
-	e := endpoint.New(slog.Default(), s, c.AliasLength)
+	e := endpoint.New(slog.Default(), storage, c.AliasLength)
 	mux := http.NewServeMux()
 
 	mux.Handle("/save", middleware.RequestId(middleware.Logger(http.HandlerFunc(e.SaveUrl))))
 	mux.Handle("/", middleware.RequestId(middleware.Logger(http.HandlerFunc(e.Redirect))))
-	return &App{config: c, mux: mux, endpoint: e, service: s}
+	return &App{config: c, mux: mux, endpoint: e}
 }
 
 func (a *App) Run() error {

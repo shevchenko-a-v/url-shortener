@@ -13,9 +13,9 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@v2.38.0 --name=Service
-type Service interface {
-	SaveUrl(string, string) error
+//go:generate go run github.com/vektra/mockery/v2@v2.38.0 --name=Repository
+type Repository interface {
+	SaveUrl(string, string) (int64, error)
 	GetUrl(string) (string, error)
 }
 
@@ -30,13 +30,13 @@ type Response struct {
 }
 
 type Endpoint struct {
-	service            Service
+	repository         Repository
 	log                *slog.Logger
 	defaultAliasLength uint64
 }
 
-func New(log *slog.Logger, service Service, defaultAliasLength uint64) *Endpoint {
-	return &Endpoint{service: service, log: log, defaultAliasLength: defaultAliasLength}
+func New(log *slog.Logger, repository Repository, defaultAliasLength uint64) *Endpoint {
+	return &Endpoint{repository: repository, log: log, defaultAliasLength: defaultAliasLength}
 }
 
 func (e *Endpoint) SaveUrl(rw http.ResponseWriter, req *http.Request) {
@@ -72,12 +72,14 @@ func (e *Endpoint) SaveUrl(rw http.ResponseWriter, req *http.Request) {
 	if body.Alias == "" {
 		body.Alias = alias.CreateRandom(e.defaultAliasLength)
 	}
-	err = e.service.SaveUrl(body.TargetUrl, body.Alias)
+	var id int64
+	id, err = e.repository.SaveUrl(body.TargetUrl, body.Alias)
 	if err != nil {
 		log.Error(err.Error())
 		_ = encoder.Encode(response.Error("couldn't save url"))
 		return
 	}
+	log.Debug(fmt.Sprintf("saved with id: %d", id))
 	_ = encoder.Encode(Response{Response: response.OK(), Alias: body.Alias})
 }
 
@@ -94,7 +96,7 @@ func (e *Endpoint) Redirect(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	aliasToGetUrl, _ := strings.CutPrefix(req.URL.String(), "/")
-	resultUrl, err := e.service.GetUrl(aliasToGetUrl)
+	resultUrl, err := e.repository.GetUrl(aliasToGetUrl)
 	if err != nil {
 		log.Error(err.Error())
 		_ = encoder.Encode(response.Error("couldn't find given alias"))

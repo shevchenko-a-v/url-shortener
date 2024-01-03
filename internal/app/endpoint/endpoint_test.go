@@ -43,7 +43,7 @@ func TestSaveHandler(t *testing.T) {
 			respError: "wrong request format",
 		},
 		{
-			name:      "Empty url",
+			name:      "Internal error",
 			alias:     "test_alias",
 			targetUrl: "http://www.google.com",
 			respError: "couldn't save url",
@@ -57,11 +57,11 @@ func TestSaveHandler(t *testing.T) {
 			require.NoError(t, err)
 
 			rr := httptest.NewRecorder()
-			serviceMock := mocks.NewService(t)
+			repositoryMock := mocks.NewRepository(t)
 			if tc.respError == "" || tc.mockError != nil {
-				serviceMock.On("SaveUrl", tc.targetUrl, mock.AnythingOfType("string")).Return(tc.mockError).Once()
+				repositoryMock.On("SaveUrl", tc.targetUrl, mock.AnythingOfType("string")).Return(int64(0), tc.mockError).Once()
 			}
-			unit := endpoint.New(slogdiscard.New(), serviceMock, tc.aliasLength)
+			unit := endpoint.New(slogdiscard.New(), repositoryMock, tc.aliasLength)
 			unit.SaveUrl(rr, req)
 
 			require.Equal(t, rr.Code, http.StatusOK)
