@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/mattn/go-sqlite3"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type Repository struct {
